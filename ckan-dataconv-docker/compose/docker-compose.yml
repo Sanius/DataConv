@@ -1,251 +1,171 @@
-# docker-compose build && docker-compose up -d
-# version: "3"
-# x-airflow-common:
-  # &airflow-common
-  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.0.1}
-  # environment:
-    # &airflow-common-env
-    # AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    # AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    # AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    # AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    # AIRFLOW__CORE__FERNET_KEY: ''
-    # AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    # AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
-  # user: root
-  # volumes:
-    # - ./dags:/opt/airflow/dags
-    # - ./logs:/opt/airflow/logs
-    # - ./plugins:/opt/airflow/plugins
-  # user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
-  # depends_on:
-    # redis:
-      # condition: service_healthy
-    # postgres:
-      # condition: service_healthy
-
+version: "3"
 
 volumes:
-  ckan_data:
-  pg_data:
-  solr_data:
-  mysql_data:
-  mongo_data:
-  postgres-db-volume:
-
-
-services:
-
-  ckan:
-    container_name: ckan
-    # image: keitaro/ckan:${CKAN_VERSION}
-    # image: dangsg/ckan:2.9
-    image: tamanhhuy/dataconv:latest
-
-    networks:
-      - frontend
-      - backend
-    depends_on:
-      - db
-      - mysql
-      - mongo
-      - postgres_airflow
-    ports:
-      - "0.0.0.0:${CKAN_PORT}:5000"
-      - "0.0.0.0:8080:8080"
-    environment:
-      - CKAN_SQLALCHEMY_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/ckan
-      - CKAN_DATASTORE_WRITE_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/datastore
-      - CKAN_DATASTORE_READ_URL=postgresql://datastore_ro:${DATASTORE_READONLY_PASSWORD}@db/datastore
-      - CKAN_SOLR_URL=http://solr:8983/solr/ckan
-      - CKAN_REDIS_URL=redis://redis:6379/1
-      - CKAN_SITE_URL=${CKAN_SITE_URL}
-      - CKAN_MAX_UPLOAD_SIZE_MB=${CKAN_MAX_UPLOAD_SIZE_MB}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
-    volumes:
-      - ckan_data:/srv/app/data
-      - ./scripts/airflow-entrypoint.sh/:/airflow-entrypoint.sh
-      - ./airflow/:/srv/app/airflow
-      - ./scripts/all.sh/:/srv/app/all.sh
-      - ./dags/:/srv/app/airflow/dags/
-      - ./dagbags/:/srv/app/dagbags/
-      - ./production.ini:/srv/app/production.ini
-    links:
-      - "mysql:mysql"
-    entrypoint:
-      # - /srv/app/start_ckan.sh
-      # - /usr/bin/supervisord
-      - /srv/app/all.sh
-      # - /airflow-entrypoint.sh
-
-
-  datapusher:
-    container_name: datapusher
-    image: keitaro/ckan-datapusher:0.0.17
-    networks:
-      - frontend
-      - backend
-    ports:
-      - "8000:8000"
-    environment:
-      - DATAPUSHER_MAX_CONTENT_LENGTH=${DATAPUSHER_MAX_CONTENT_LENGTH}
-      - DATAPUSHER_CHUNK_SIZE=${DATAPUSHER_CHUNK_SIZE}
-      - DATAPUSHER_CHUNK_INSERT_ROWS=${DATAPUSHER_CHUNK_INSERT_ROWS}
-      - DATAPUSHER_DOWNLOAD_TIMEOUT=${DATAPUSHER_DOWNLOAD_TIMEOUT}
-      - DATAPUSHER_SSL_VERIFY=${DATA_PUSHER_SSL_VERIFY}
-      - DATAPUSHER_REWRITE_RESOURCES=${DATAPUSHER_REWRITE_RESOURCES}
-      - DATAPUSHER_REWRITE_URL=${DATAPUSHER_REWRITE_URL}
-
-  db:
-    container_name: db
-    build:
-      context: .
-      dockerfile: postgresql/Dockerfile
-      args:
-        - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
-        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    networks:
-      - backend
-    environment:
-      - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "ckan"]
-
-  solr:
-    container_name: solr
-    build:
-      context: .
-      dockerfile: solr/Dockerfile
-      args:
-        - CKAN_VERSION=2.9.1  
-    networks:
-      - backend
-    volumes:
-      - solr_data:/opt/solr/server/solr/ckan/data
-
-  mysql:
-    container_name: mysql
-    image: mysql:8.0.22
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_USER=admin
-      - MYSQL_PASSWORD=password
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - backend
-
-  mongo:
-    container_name: mongo
-    image: mongo:4.4
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - backend
-
-  postgres_airflow:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
-      interval: 5s
-      retries: 5
-    ports:
-      - "5434:5432"
-    networks:
-      - backend
-    restart: always
-
-  redis_tttt:
-    image: redis:latest
-    ports:
-      - 6379:6379
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 30s
-      retries: 50
-    restart: always
-
-  # airflow-webserver:
-  #   <<: *airflow-common
-  #   command: webserver
-  #   ports:
-  #     - 8080:8080
-  #   healthcheck:
-  #     test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-  #     interval: 10s
-  #     timeout: 10s
-  #     retries: 5
-  #   restart: always
-
-  # airflow-scheduler:
-  #   <<: *airflow-common
-  #   command: scheduler
-  #   restart: always
-
-  # airflow-worker:
-  #   <<: *airflow-common
-  #   command: celery worker
-  #   restart: always
-
-  # airflow-init:
-  #   <<: *airflow-common
-  #   command: version
-  #   environment:
-  #     <<: *airflow-common-env
-  #     _AIRFLOW_DB_UPGRADE: 'true'
-  #     _AIRFLOW_WWW_USER_CREATE: 'true'
-  #     _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
-  #     _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-
-  # flower:
-  #   <<: *airflow-common
-  #   command: celery flower
-  #   ports:
-  #     - 5555:5555
-  #   healthcheck:
-  #     test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
-  #     interval: 10s
-  #     timeout: 10s
-  #     retries: 5
-  #   restart: always
-
-  redis:
-    container_name: redis
-    image: redis:${REDIS_VERSION}
-    networks:
-      - backend
-
-
-  pgadmin:
-    container_name: pgadmin4
-    image: dpage/pgadmin4
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: password
-    ports:
-      - "5051:80"
-    networks:
-      - backend
-
+    ckan_data:
+    pg_data:
+    solr_data:
+    mysql_data:
+    mongo_data:
+    postgres-db-volume:
 
 networks:
-  frontend:
-  backend:
+    frontend:
+    backend:
+
+services:
+    ckan:
+        container_name: ckan
+        image: tamanhhuy/dataconv:latest
+        networks:
+            - frontend
+            - backend
+        depends_on:
+            - db
+            - mysql
+            - mongo
+            - postgres_airflow
+        ports:
+            - "0.0.0.0:${CKAN_PORT}:5000"
+            - "0.0.0.0:8080:8080"
+        environment:
+            - CKAN_SQLALCHEMY_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/ckan
+            - CKAN_DATASTORE_WRITE_URL=postgresql://ckan:${POSTGRES_PASSWORD}@db/datastore
+            - CKAN_DATASTORE_READ_URL=postgresql://datastore_ro:${DATASTORE_READONLY_PASSWORD}@db/datastore
+            - CKAN_SOLR_URL=http://solr:8983/solr/ckan
+            - CKAN_REDIS_URL=redis://redis:6379/1
+            - CKAN_SITE_URL=${CKAN_SITE_URL}
+            - CKAN_MAX_UPLOAD_SIZE_MB=${CKAN_MAX_UPLOAD_SIZE_MB}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
+        volumes:
+            - ckan_data:/srv/app/data
+            - ./scripts/airflow-entrypoint.sh/:/airflow-entrypoint.sh
+            - ./airflow/:/srv/app/airflow
+            - ./scripts/all.sh/:/srv/app/all.sh
+            - ./dags/:/srv/app/airflow/dags/
+            - ./dagbags/:/srv/app/dagbags/
+            - ./production.ini:/srv/app/production.ini
+        links:
+            - "mysql:mysql"
+        entrypoint:
+            - /srv/app/all.sh
+
+    datapusher:
+        container_name: datapusher
+        image: keitaro/ckan-datapusher:0.0.17
+        networks:
+            - frontend
+            - backend
+        ports:
+            - "8000:8000"
+        environment:
+            - DATAPUSHER_MAX_CONTENT_LENGTH=${DATAPUSHER_MAX_CONTENT_LENGTH}
+            - DATAPUSHER_CHUNK_SIZE=${DATAPUSHER_CHUNK_SIZE}
+            - DATAPUSHER_CHUNK_INSERT_ROWS=${DATAPUSHER_CHUNK_INSERT_ROWS}
+            - DATAPUSHER_DOWNLOAD_TIMEOUT=${DATAPUSHER_DOWNLOAD_TIMEOUT}
+            - DATAPUSHER_SSL_VERIFY=${DATA_PUSHER_SSL_VERIFY}
+            - DATAPUSHER_REWRITE_RESOURCES=${DATAPUSHER_REWRITE_RESOURCES}
+            - DATAPUSHER_REWRITE_URL=${DATAPUSHER_REWRITE_URL}
+
+    db:
+        container_name: db
+        build:
+            context: .
+            dockerfile: postgresql/Dockerfile
+            args:
+                - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
+                - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        networks:
+            - backend
+        environment:
+            - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        volumes:
+            - pg_data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "ckan"]
+
+    postgres_airflow:
+        image: postgres:13
+        environment:
+            POSTGRES_USER: airflow
+            POSTGRES_PASSWORD: airflow
+            POSTGRES_DB: airflow
+        volumes:
+            - postgres-db-volume:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "airflow"]
+            interval: 5s
+            retries: 5
+        ports:
+            - "5434:5432"
+        networks:
+            - backend
+        restart: always
+
+    pgadmin:
+        container_name: pgadmin4
+        image: dpage/pgadmin4
+        restart: always
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@admin.com
+            PGADMIN_DEFAULT_PASSWORD: password
+        ports:
+            - "5051:80"
+        networks:
+            - backend
+
+    solr:
+        container_name: solr
+        build:
+            context: .
+            dockerfile: solr/Dockerfile
+            args:
+                - CKAN_VERSION=2.9.1
+        networks:
+            - backend
+        volumes:
+            - solr_data:/opt/solr/server/solr/ckan/data
+
+    redis_tttt:
+        image: redis:latest
+        ports:
+            - 6379:6379
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 30s
+            retries: 50
+        restart: always
+
+    redis:
+        container_name: redis
+        image: redis:${REDIS_VERSION}
+        networks:
+            - backend
+
+    mysql:
+        container_name: mysql
+        image: mysql:8.0.22
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            - MYSQL_ROOT_PASSWORD=password
+            - MYSQL_USER=admin
+            - MYSQL_PASSWORD=password
+        volumes:
+            - mysql_data:/var/lib/mysql
+        networks:
+            - backend
+
+    mongo:
+        container_name: mongo
+        image: mongo:4.4
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=admin
+            - MONGO_INITDB_ROOT_PASSWORD=password
+        volumes:
+            - mongo_data:/data/db
+        networks:
+            - backend
