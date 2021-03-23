@@ -3,6 +3,8 @@
 ##################
 FROM ubuntu:18.04 as ckan_build
 
+SHELL ["/bin/bash", "-c"]
+
 # Set src dirs
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=${APP_DIR}/src
@@ -16,14 +18,17 @@ ENV DEFAULT_EXTENSIONS envvars
 # Locations and tags, please use specific tags or revisions
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
 ENV ENVVARS_GIT_BRANCH=0.0.1
+# Get python version from docker-compose
+ARG PYTHON_VERSION
 
 # Update system
-RUN apt update
-RUN apt upgrade
-RUN apt autoremove
+RUN apt-get -y update
+RUN apt-get -y upgrade
+RUN apt-get -y autoremove
 
 # Packages to build CKAN requirements and plugins
-RUN apt -y install git \
+RUN apt-get -y install apt-utils \
+        git \
         curl \
         vim \
         python3 \
@@ -50,23 +55,23 @@ RUN apt -y install git \
         liblzma-dev
 
 # Install pyenv
-RUN git clone https://github.com/pyenv/pyenv.git /.pyenv \
-    echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc \
-    echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc \
-    source /.bashrc \
-    git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv \
-    echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc \
-    git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
+RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
+RUN echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc
+RUN echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc
+RUN echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc
+RUN source /.bashrc
+RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+RUN echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc
+RUN git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
 
 # Setup ckan environment (python 3.6.11)
-RUN source /.bashrc \
-    pyenv install 3.6.11 \
-    pyenv virtualenv 3.6.11 ckan
+RUN source /.bashrc
+run pyenv install ${PYTHON_VERSION} \
+    pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
-RUN pyenv activate ckan \
-    python3 -m pip install --upgrade pip \
+RUN pyenv activate ckan
+RUN python3 -m pip install --upgrade pip \
     python3 -m pip install setuptools==44.1.0 \
     python3 -m pip install wheel
 
@@ -81,14 +86,16 @@ RUN mkdir -p ${APP_DIR} \
 WORKDIR ${SRC_DIR}
 
 RUN python3 -m pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
-RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==20.6.2 greenlet==0.4.16
+RUN python3 -m pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==20.6.2 greenlet==0.4.16
 # Fetch and build the default CKAN extensions
-RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
+RUN python3 -m pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
 
 ############
 ### MAIN ###
 ############
 FROM ubuntu:18.04
+
+SHELL ["/bin/bash", "-c"]
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
@@ -99,11 +106,12 @@ ENV CKAN_PLUGINS envvars image_view text_view recline_view ckanext-mysql2mongodb
 
 WORKDIR ${APP_DIR}
 
-RUN apt update
+RUN apt-get -y update
 
 # Install necessary packages to run CKAN
-RUN apt install -y --no-install-recommends tzdata
-RUN apt install -y git \
+RUN apt-get install -y --no-install-recommends tzdata
+RUN apt-get install -y apt-utils \
+        git \
         curl \
         vim \
         gettext \
@@ -138,23 +146,23 @@ RUN apt install -y git \
         apache2-utils
 
 # Install pyenv
-RUN git clone https://github.com/pyenv/pyenv.git /.pyenv \
-    echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc \
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc \
-    echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc \
-    source /.bashrc \
-    git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv \
-    echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc \
-    git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
+RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
+RUN echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc
+RUN echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc
+RUN echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc
+RUN source /.bashrc
+RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+RUN echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc
+RUN git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
 
 # Setup ckan environment (python 3.6.11)
-RUN source /.bashrc \
-    pyenv install 3.6.11 \
-    pyenv virtualenv 3.6.11 ckan
+RUN source /.bashrc
+RUN pyenv install ${PYTHON_VERSION} \
+    pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
-RUN pyenv activate ckan \
-    python3 -m pip install --upgrade pip \
+RUN pyenv activate ckan
+RUN python3 -m pip install --upgrade pip \
     python3 -m pip install setuptools==44.1.0 \
     python3 -m pip install wheel
 
@@ -219,7 +227,7 @@ RUN mkdir ${APP_DIR}/ext_requirements
 COPY ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
 RUN python3 -m pip install -r ${APP_DIR}/ext_requirements/requirements.txt
 
-RUN apt update
+RUN apt-get -y update
 
 RUN apt-get install -y --no-install-recommends \
     mysql-client \ 
