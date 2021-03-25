@@ -54,26 +54,30 @@ RUN apt-get -y install apt-utils \
         libsqlite3-dev \
         liblzma-dev
 
+# ================================================================================================
 # Install pyenv
+
 RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
-RUN echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc
-RUN echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc
-RUN echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc
-RUN source /.bashrc
-RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
-RUN echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc
-RUN git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
+ENV PYENV_ROOT /.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+ENV eval "$(pyenv init -)"
+RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
+RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
+ENV PATH $PYENV_ROOT/plugins/pyenv-virtualenv/shims:$PYENV_ROOT/plugins/pyenv-virtualenv/bin:$PATH
+ENV eval "$(pyenv virtualenv-init -)"
+ENV PATH $PYENV_ROOT/plugins/pyenv-update/bin:$PATH
 
 # Setup ckan environment (python 3.6.11)
-RUN source /.bashrc
-run pyenv install ${PYTHON_VERSION} \
-    pyenv virtualenv ${PYTHON_VERSION} ckan
+RUN pyenv install ${PYTHON_VERSION}
+RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
 RUN pyenv activate ckan
 RUN python3 -m pip install --upgrade pip \
     python3 -m pip install setuptools==44.1.0 \
     python3 -m pip install wheel
+
+# ================================================================================================
 
 # Fetch and build CKAN and requirements
 RUN python3 -m pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
@@ -145,26 +149,30 @@ RUN apt-get install -y apt-utils \
         liblzma-dev \
         apache2-utils
 
+# ================================================================================================
 # Install pyenv
+
 RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
-RUN echo 'export PYENV_ROOT="/.pyenv"' >> /.bashrc
-RUN echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> /.bashrc
-RUN echo -e 'if command -v pyenv 1>/dev/null 2>&1; then\n  eval "$(pyenv init -)"\nfi' >> /.bashrc
-RUN source /.bashrc
-RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
-RUN echo 'eval "$(pyenv virtualenv-init -)"' >> /.bashrc
-RUN git clone https://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
+ENV PYENV_ROOT /.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+ENV eval "$(pyenv init -)"
+RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
+RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
+ENV PATH $PYENV_ROOT/plugins/pyenv-virtualenv/shims:$PYENV_ROOT/plugins/pyenv-virtualenv/bin:$PATH
+ENV eval "$(pyenv virtualenv-init -)"
+ENV PATH $PYENV_ROOT/plugins/pyenv-update/bin:$PATH
 
 # Setup ckan environment (python 3.6.11)
-RUN source /.bashrc
-RUN pyenv install ${PYTHON_VERSION} \
-    pyenv virtualenv ${PYTHON_VERSION} ckan
+RUN pyenv install ${PYTHON_VERSION}
+RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
 RUN pyenv activate ckan
 RUN python3 -m pip install --upgrade pip \
     python3 -m pip install setuptools==44.1.0 \
     python3 -m pip install wheel
+
+# ================================================================================================
 
 # Get artifacts from build stages
 COPY --from=ckan_build /wheels /srv/app/wheels
