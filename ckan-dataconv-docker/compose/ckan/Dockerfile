@@ -3,7 +3,7 @@
 ##################
 FROM ubuntu:18.04 as ckan_build
 
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-i", "-c"]
 
 # Set src dirs
 ENV APP_DIR=/srv/app
@@ -60,46 +60,48 @@ RUN apt-get -y install apt-utils \
 RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
 ENV PYENV_ROOT /.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-ENV eval "$(pyenv init -)"
 RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
-RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
 ENV PATH $PYENV_ROOT/plugins/pyenv-virtualenv/shims:$PYENV_ROOT/plugins/pyenv-virtualenv/bin:$PATH
-ENV eval "$(pyenv virtualenv-init -)"
+RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
 ENV PATH $PYENV_ROOT/plugins/pyenv-update/bin:$PATH
+RUN echo eval "$(pyenv init -)" >> /root/.bashrc
+RUN echo eval "$(pyenv virtualenv-init -)" >> /root/.bashrc
 
 # Setup ckan environment (python 3.6.11)
 RUN pyenv install ${PYTHON_VERSION}
 RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
-RUN pyenv activate ckan
-RUN python3 -m pip install --upgrade pip \
-    python3 -m pip install setuptools==44.1.0 \
+RUN pyenv activate ckan && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install setuptools==44.1.0 && \
     python3 -m pip install wheel
 
 # ================================================================================================
 
 # Fetch and build CKAN and requirements
-RUN python3 -m pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
+RUN pyenv activate ckan && \
+    python3 -m pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
 
 # Create the src directory
-RUN mkdir -p ${APP_DIR} \
+RUN mkdir -p ${APP_DIR} && \
     ln -s $PYENV_ROOT/versions/ckan/src ${SRC_DIR}
 
 # Set default src dir
 WORKDIR ${SRC_DIR}
 
-RUN python3 -m pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
-RUN python3 -m pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==20.6.2 greenlet==0.4.16
+RUN pyenv activate ckan && \
+    python3 -m pip wheel --wheel-dir=/wheels -r ckan/requirements.txt && \
+    python3 -m pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==20.6.2 greenlet==0.4.16 && \
 # Fetch and build the default CKAN extensions
-RUN python3 -m pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
+    python3 -m pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
 
 ############
 ### MAIN ###
 ############
 FROM ubuntu:18.04
 
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-i", "-c"]
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
@@ -107,6 +109,7 @@ ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
 ENV CKAN_SITE_URL=http://localhost:5000
 ENV CKAN_PLUGINS envvars image_view text_view recline_view ckanext-mysql2mongodb
+ARG PYTHON_VERSION
 
 WORKDIR ${APP_DIR}
 
@@ -155,21 +158,21 @@ RUN apt-get install -y apt-utils \
 RUN git clone https://github.com/pyenv/pyenv.git /.pyenv
 ENV PYENV_ROOT /.pyenv
 ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
-ENV eval "$(pyenv init -)"
 RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/pyenv-virtualenv
-RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
 ENV PATH $PYENV_ROOT/plugins/pyenv-virtualenv/shims:$PYENV_ROOT/plugins/pyenv-virtualenv/bin:$PATH
-ENV eval "$(pyenv virtualenv-init -)"
+RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
 ENV PATH $PYENV_ROOT/plugins/pyenv-update/bin:$PATH
+RUN echo eval "$(pyenv init -)" >> /root/.bashrc
+RUN echo eval "$(pyenv virtualenv-init -)" >> /root/.bashrc
 
 # Setup ckan environment (python 3.6.11)
 RUN pyenv install ${PYTHON_VERSION}
 RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 
 # Downgrade setuptools so that CKAN requirements can be built
-RUN pyenv activate ckan
-RUN python3 -m pip install --upgrade pip \
-    python3 -m pip install setuptools==44.1.0 \
+RUN pyenv activate ckan && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install setuptools==44.1.0 && \
     python3 -m pip install wheel
 
 # ================================================================================================
@@ -179,7 +182,8 @@ COPY --from=ckan_build /wheels /srv/app/wheels
 COPY --from=ckan_build /srv/app/src/ckan /srv/app/src/ckan
 
 # Additional install steps for build stages artifacts
-RUN python3 -m pip install --no-index --find-links=/srv/app/wheels uwsgi gevent
+RUN pyenv activate ckan && \
+    python3 -m pip install --no-index --find-links=/srv/app/wheels uwsgi gevent
 
 # Create a local user and group to run the app
 RUN addgroup --system --gid 92 ckan && \
@@ -188,7 +192,8 @@ RUN addgroup --system --gid 92 ckan && \
     usermod -aG sudo ckan
 
 ARG CACHEBUST=1
-RUN python3 -m pip install -e git+https://github.com/ligthsworn/ckanext-mysql2mongodb#egg=ckanext-mysql2mongodb --no-cache-dir
+RUN pyenv activate ckan && \
+    python3 -m pip install -e git+https://github.com/ligthsworn/ckanext-mysql2mongodb#egg=ckanext-mysql2mongodb --no-cache-dir
 
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
@@ -197,7 +202,8 @@ ENV LANGUAGE=en_US.UTF-8
 RUN locale-gen en_US.UTF-8
 
 # Install CKAN
-RUN python3 -m pip install -e /srv/app/src/ckan && \
+RUN pyenv activate ckan && \
+    python3 -m pip install -e /srv/app/src/ckan && \
     cd ${SRC_DIR}/ckan && \
     cp who.ini ${APP_DIR} && \
     python3 -m pip install --no-index --find-links=/srv/app/wheels -r requirements.txt && \
@@ -205,7 +211,8 @@ RUN python3 -m pip install -e /srv/app/src/ckan && \
     python3 -m pip install --no-index --find-links=/srv/app/wheels ckanext-envvars && \
     # Create and update CKAN config
     # Set timezone
-    echo "UTC" >  /etc/timezone && \
+    echo "UTC" >  /etc/timezone
+RUN pyenv activate ckan && \
     # Generate CKAN config
     ckan generate config ${APP_DIR}/production.ini && \
     # Configure plugins
@@ -223,7 +230,7 @@ RUN python3 -m pip install -e /srv/app/src/ckan && \
 RUN rm -rf /srv/app/wheels
 
 # Copy necessary scripts
-COPY setup/app ${APP_DIR}
+COPY ckan/setup/app/ ${APP_DIR}
 
 # Create entrypoint directory for children image scripts
 ONBUILD RUN mkdir docker-entrypoint.d
@@ -232,8 +239,10 @@ ONBUILD RUN mkdir docker-entrypoint.d
 ONBUILD RUN mkdir docker-afterinit.d
 
 RUN mkdir ${APP_DIR}/ext_requirements
-COPY ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
-RUN python3 -m pip install -r ${APP_DIR}/ext_requirements/requirements.txt
+COPY ckan/ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
+
+RUN pyenv activate ckan && \
+    python3 -m pip install -r ${APP_DIR}/ext_requirements/requirements.txt
 
 RUN apt-get -y update
 
@@ -257,7 +266,8 @@ RUN apt-get install -y --no-install-recommends \
 RUN mkdir -p /srv/app/airflow
 RUN chmod 777 -R /srv/app/airflow
 ENV AIRFLOW_HOME=/srv/app/airflow
-RUN python3 -m pip install apache-airflow
+RUN pyenv activate ckan && \
+    python3 -m pip install apache-airflow
 
 EXPOSE 5000
 

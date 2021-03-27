@@ -43,11 +43,11 @@ services:
             - DS_RO_PASS=${DATASTORE_READONLY_PASSWORD}
         volumes:
             - ckan_data:/srv/app/data
-            - ./scripts/airflow-entrypoint.sh:/airflow-entrypoint.sh
             - ./airflow/:/srv/app/airflow
-            - ./scripts/all.sh:/srv/app/all.sh
             - ./dags/:/srv/app/airflow/dags/
             - ./dagbags/:/srv/app/dagbags/
+            - ./scripts/airflow-entrypoint.sh:/airflow-entrypoint.sh
+            - ./scripts/all.sh:/srv/app/all.sh
             - ./production.ini:/srv/app/production.ini
         links:
             - "mysql:mysql"
