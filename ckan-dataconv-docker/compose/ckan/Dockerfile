@@ -75,7 +75,8 @@ RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 RUN pyenv activate ckan && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install setuptools==44.1.0 && \
-    python3 -m pip install wheel
+    python3 -m pip install wheel && \
+    python3 -m pip install psycopg2
 
 # ================================================================================================
 
@@ -267,7 +268,8 @@ RUN mkdir -p /srv/app/airflow
 RUN chmod 777 -R /srv/app/airflow
 ENV AIRFLOW_HOME=/srv/app/airflow
 RUN pyenv activate ckan && \
-    python3 -m pip install apache-airflow
+    python3 -m pip install apache-airflow && \
+    python3 -m pip install psycopg2
 
 EXPOSE 5000
 

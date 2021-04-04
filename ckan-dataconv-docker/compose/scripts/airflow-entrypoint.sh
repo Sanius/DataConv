@@ -15,7 +15,7 @@ fi
 python3 -m airflow db init
 
 # airflow scheduler
-python3 -m  airflow scheduler &
+python3 -m  airflow scheduler
 
 # airflow webserver
 python3 -m airflow webserver

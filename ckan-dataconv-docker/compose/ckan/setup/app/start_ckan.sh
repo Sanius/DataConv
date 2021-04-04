@@ -1,11 +1,14 @@
 #!/bin/bash
+
+pyenv activate ckan
+
 # Run any startup scripts provided by images extending this one
 if [[ -d "${APP_DIR}/docker-entrypoint.d" ]]
 then
     for f in ${APP_DIR}/docker-entrypoint.d/*; do
         case "$f" in
             *.sh)     echo "$0: Running init file $f"; . "$f" ;;
-            *.py)     echo "$0: Running init file $f"; python "$f"; echo ;;
+            *.py)     echo "$0: Running init file $f"; python3 "$f"; echo ;;
             *)        echo "$0: Ignoring $f (not an sh or py file)" ;;
         esac
         echo
@@ -16,10 +19,10 @@ fi
 UWSGI_OPTS="--socket /tmp/uwsgi.sock --uid ckan --gid ckan --http :5000 --master --enable-threads --wsgi-file /srv/app/wsgi.py --module wsgi:application --lazy-apps --gevent 2000 -p 2 -L --gevent-early-monkey-patch --vacuum --harakiri 50 --callable application"
 
 # Run the prerun script to init CKAN and create the default admin user
-python prerun.py
+python3 prerun.py
 
 # Check if we are in maintenance mode and if yes serve the maintenance pages
-if [ "$MAINTENANCE_MODE" = true ]; then PYTHONUNBUFFERED=1 python maintenance/serve.py; fi
+if [ "$MAINTENANCE_MODE" = true ]; then PYTHONUNBUFFERED=1 python3 maintenance/serve.py; fi
 
 # Run any after prerun/init scripts provided by images extending this one
 if [[ -d "${APP_DIR}/docker-afterinit.d" ]]
@@ -27,7 +30,7 @@ then
     for f in ${APP_DIR}/docker-afterinit.d/*; do
         case "$f" in
             *.sh)     echo "$0: Running after prerun init file $f"; . "$f" ;;
-            *.py)     echo "$0: Running after prerun init file $f"; python "$f"; echo ;;
+            *.py)     echo "$0: Running after prerun init file $f"; python3 "$f"; echo ;;
             *)        echo "$0: Ignoring $f (not an sh or py file)" ;;
         esac
         echo
