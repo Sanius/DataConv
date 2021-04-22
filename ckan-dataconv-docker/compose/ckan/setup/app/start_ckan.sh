@@ -1,14 +1,5 @@
 #!/bin/bash
 
-echo "hello World"
-echo "============================================================================="
-
-eval "$(pyenv init -)"
-
-pyenv activate ckan
-
-echo "============================================================================="
-
 # Run any startup scripts provided by images extending this one
 if [[ -d "${APP_DIR}/docker-entrypoint.d" ]]
 then

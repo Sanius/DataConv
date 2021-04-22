@@ -46,7 +46,7 @@ services:
             - ./airflow/:/srv/app/airflow
             - ./dags/:/srv/app/airflow/dags/
             - ./dagbags/:/srv/app/dagbags/
-            - ./scripts/airflow-entrypoint.sh:/airflow-entrypoint.sh
+            - ./scripts/airflow-entrypoint.sh:/srv/app/airflow-entrypoint.sh
             - ./scripts/all.sh:/srv/app/all.sh
             - ./production.ini:/srv/app/production.ini
         links:
