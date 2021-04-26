@@ -6,22 +6,22 @@ FROM ubuntu:20.04
 
 SHELL ["/bin/bash", "-i", "-c"]
 
-# System environments
+# Build-time variables
+ARG PYTHON_VERSION=${PYTHON_VERSION}
+ARG CKAN_SITE_URL=${CKAN_SITE_URL}
+ARG CKAN_PLUGINS=${CKAN_PLUGINS}
+# Environment variables
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
 ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
-ENV CKAN_SITE_URL=http://localhost:5000
-ENV CKAN_PLUGINS envvars image_view text_view recline_view ckanext-mysql2mongodb
-ENV PYTHON_VERSION 3.6.11
-WORKDIR ${APP_DIR}
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
 ENV GIT_BRANCH=ckan-2.9.2
-ENV CKAN_PLUGINS envvars image_view text_view recline_view ckanext-mysql2mongodb
 # CKAN extension
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
 ENV ENVVARS_GIT_BRANCH=0.0.1
+WORKDIR ${APP_DIR}
 
 RUN apt-get -y update
 # Install necessary packages to run CKAN
@@ -97,6 +97,7 @@ RUN pyenv activate ckan && \
     python3 -m pip install setuptools==44.1.0 && \
     python3 -m pip install wheel && \
     python3 -m pip install psycopg2 && \
+    python3 -m pip install psycopg2-binary && \
     python3 -m pip install numpy
 
 # Create the src directory
@@ -197,7 +198,10 @@ ENV AIRFLOW_HOME=/srv/app/airflow
 RUN pyenv local ckan && \
     python3 -m pip install apache-airflow
 USER root
+RUN echo "================================================"
 RUN chown ckan:ckan /srv/app/airflow
+RUN chmod ugo+rwx /srv/app/airflow
+RUN echo "================================================"
 USER ckan
 
 EXPOSE 5000
