@@ -54,7 +54,7 @@ services:
         links:
             - "mysql:mysql"
         entrypoint:
-            - /srv/app/all.sh
+            - /srv/app/start_ckan.sh
 
     datapusher:
         container_name: datapusher

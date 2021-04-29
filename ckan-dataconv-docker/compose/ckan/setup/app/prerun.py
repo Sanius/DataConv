@@ -118,7 +118,7 @@ def init_datastore():
         print((datastore_perms.stdout.read()))
     except psycopg2.Error as e:
         print('[prerun] Could not initialize datastore')
-        print(e.output.decode('utf-8'))
+        print(e))
 
     except subprocess.CalledProcessError as e:
         if 'OperationalError' in str(e.output):

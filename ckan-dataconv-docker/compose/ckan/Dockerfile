@@ -120,7 +120,7 @@ RUN pyenv activate ckan && \
 
 RUN chown ckan:ckan ${SRC_DIR}
 RUN pyenv activate ckan && \
-    python3 -m pip install -e git+https://github.com/ligthsworn/ckanext-mysql2mongodb#egg=ckanext-mysql2mongodb --no-cache-dir
+    python3 -m pip install -e git+https://github.com/Sanius/ckanext-mysql2mongodb#egg=ckanext-mysql2mongodb --no-cache-dir
 
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
@@ -196,7 +196,8 @@ RUN mkdir -p /srv/app/airflow
 RUN chmod 777 -R /srv/app/airflow
 ENV AIRFLOW_HOME=/srv/app/airflow
 RUN pyenv local ckan && \
-    python3 -m pip install apache-airflow
+    python3 -m pip install apache-airflow && \
+    python3 -m pip install --upgrade https://github.com/pajachiet/pymongo-schema/archive/master.zip
 USER root
 RUN echo "================================================"
 RUN chown ckan:ckan /srv/app/airflow

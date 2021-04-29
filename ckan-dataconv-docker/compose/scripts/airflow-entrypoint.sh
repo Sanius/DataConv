@@ -8,16 +8,19 @@ fi
 
 if [ ! -f $AIRFLOW_HOME/"airflow.cfg" ] 
 then
-    python3 -m airflow db init
+    airflow db init
 fi
 
+echo "========================================================"
+
 # airflow db reset
-python3 -m airflow db init
+airflow db init
 
 # airflow scheduler
-python3 -m  airflow scheduler
+airflow scheduler & 
 
 # airflow webserver
-python3 -m airflow webserver
+exec airflow webserver
 
 
+echo "000000000000000000000000000000000000000000000000000000"
