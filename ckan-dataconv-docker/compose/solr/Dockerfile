@@ -1,11 +1,10 @@
 FROM solr:6.6.6
 
 # Enviroment
-ENV SOLR_CORE ckan
-ENV SOLR_VERSION 6.6.6
-
-# Build Arguments
-ARG CKAN_VERSION
+ARG SOLR_CORE=${SOLR_CORE}
+ARG SOLR_USER=${SOLR_USER}
+ARG SOLR_VERSION=${SOLR_VERSION}
+ARG CKAN_VERSION=${CKAN_VERSION}
 
 # Create Directories
 RUN mkdir -p /opt/solr/server/solr/$SOLR_CORE/conf
