@@ -11,6 +11,7 @@ logs/
 dags/
 airflow-logs/
 *.log
+latest
 
 # Distribution / packaging
 .Python
@@ -34,3 +35,4 @@ intermediate_data/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.pid

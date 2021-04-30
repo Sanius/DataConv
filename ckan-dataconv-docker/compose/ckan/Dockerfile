@@ -120,7 +120,7 @@ RUN pyenv activate ckan && \
 
 RUN chown ckan:ckan ${SRC_DIR}
 RUN pyenv activate ckan && \
-    python3 -m pip install -e git+https://github.com/Sanius/ckanext-mysql2mongodb#egg=ckanext-mysql2mongodb --no-cache-dir
+    python3 -m pip install -e git+https://github.com/Sanius/ckanext-mysql2mongodb@develop#egg=ckanext-mysql2mongodb --no-cache-dir
 
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8

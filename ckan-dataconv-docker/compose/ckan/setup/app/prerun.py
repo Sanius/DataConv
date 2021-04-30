@@ -75,13 +75,13 @@ def init_db():
         print('[prerun] Initializing or upgrading db - end')
     except subprocess.CalledProcessError as e:
         if 'OperationalError' in str(e.output):
-            print(e.output.decode('utf-8'))
+            print(e)
             print('[prerun] Database not ready, waiting a bit before exit...')
             import time
             time.sleep(5)
             sys.exit(1)
         else:
-            print(e.output.decode('utf-8'))
+            print(e)
             raise e
     print('[prerun] Initializing or upgrading db - finish')
 
@@ -118,16 +118,16 @@ def init_datastore():
         print((datastore_perms.stdout.read()))
     except psycopg2.Error as e:
         print('[prerun] Could not initialize datastore')
-        print(e))
+        print(e)
 
     except subprocess.CalledProcessError as e:
         if 'OperationalError' in str(e.output):
-            print(e.output.decode('utf-8'))
+            print(e)
             print('[prerun] Database not ready, waiting a bit before exit...')
             time.sleep(5)
             sys.exit(1)
         else:
-            print(e.output.decode('utf-8'))
+            print(e)
             raise e
     finally:
         cursor.close()
