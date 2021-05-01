@@ -52,9 +52,12 @@ services:
             - ./scripts/all.sh:/srv/app/all.sh
             - ./production.ini:/srv/app/production.ini
         links:
-            - "mysql:mysql"
+            - postgresql_db:postgresql_db
+            - mysql:mysql
+            - mongo:mongo
+            - postgresql_airflow_db:postgresql_airflow_db
         entrypoint:
-            - /srv/app/start_ckan.sh
+            - /srv/app/all.sh
 
     datapusher:
         container_name: datapusher

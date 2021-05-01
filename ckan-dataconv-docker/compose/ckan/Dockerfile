@@ -199,10 +199,8 @@ RUN pyenv local ckan && \
     python3 -m pip install apache-airflow && \
     python3 -m pip install --upgrade https://github.com/pajachiet/pymongo-schema/archive/master.zip
 USER root
-RUN echo "================================================"
 RUN chown ckan:ckan /srv/app/airflow
 RUN chmod ugo+rwx /srv/app/airflow
-RUN echo "================================================"
 USER ckan
 
 EXPOSE 5000

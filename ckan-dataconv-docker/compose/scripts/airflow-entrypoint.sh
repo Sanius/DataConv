@@ -11,8 +11,6 @@ then
     airflow db init
 fi
 
-echo "========================================================"
-
 # airflow db reset
 airflow db init
 
@@ -21,6 +19,3 @@ airflow scheduler &
 
 # airflow webserver
 exec airflow webserver
-
-
-echo "000000000000000000000000000000000000000000000000000000"

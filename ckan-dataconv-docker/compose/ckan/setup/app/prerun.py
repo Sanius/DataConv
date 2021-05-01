@@ -7,7 +7,7 @@ import re
 
 import time
 
-ckan_ini = os.environ.get('CKAN_INI', '/srv/app/ext_setup/production.ini')
+ckan_ini = os.environ.get('CKAN_INI', '/srv/app/production.ini')
 
 RETRY = 5
 
@@ -30,7 +30,7 @@ def check_db_connection(retry=None):
         import time
         time.sleep(10)
         check_db_connection(retry = retry - 1)
-    finally:
+    else:
         connection.close()
 
 def check_solr_connection(retry=None):
@@ -99,20 +99,15 @@ def init_datastore():
         datastore_perms = subprocess.Popen(
             datastore_perms_command,
             stdout=subprocess.PIPE)
-        perms_sql = datastore_perms.stdout.read()
-        perms_sql = re.sub('\\\\connect \"(.*)\"', '', perms_sql.decode('utf-8'))
-        perms_sql_list = perms_sql.split('\n')
+        perms_sql_list = re.sub('\\\\connect \"(.*)\"', '', datastore_perms.stdout.read().decode('utf-8')).split('\n')
         perms_sql_list.pop(0)
         perms_sql = '\n'.join(perms_sql_list)
-        print(perms_sql)
         cursor.execute(perms_sql)
         for notice in connection.notices:
             print(notice)
         connection.commit()
-
         print('[prerun] Initializing datastore db - end')
-        print((datastore_perms.stdout.read()))
-    except psycopg2.errors.SyntaxError as e:
+    except psycopg2.Error as e:
         print('[prerun] Could not initialize datastore')
         print(e)
 
@@ -156,8 +151,7 @@ def create_sysadmin():
         print(('[prerun] Created user {0}'.format(name)))
 
         # Make it sysadmin
-        command = ['ckan', '-c', ckan_ini, 'sysadmin', 'add',
-                   name]
+        command = ['ckan', '-c', ckan_ini, 'sysadmin', 'add', name]
 
         subprocess.call(command)
         print(('[prerun] Made user {0} a sysadmin'.format(name)))

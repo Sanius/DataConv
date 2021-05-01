@@ -57,3 +57,6 @@ then
 else
   echo "[prerun] failed...not starting CKAN."
 fi
+
+ckan -c production.ini run &
+exec ckan -c production.ini jobs worker
