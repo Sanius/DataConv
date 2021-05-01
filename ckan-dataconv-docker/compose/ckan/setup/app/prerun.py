@@ -7,7 +7,7 @@ import re
 
 import time
 
-ckan_ini = os.environ.get('CKAN_INI', '/srv/app/production.ini')
+ckan_ini = os.environ.get('CKAN_INI', '/srv/app/ext_setup/production.ini')
 
 RETRY = 5
 
@@ -24,14 +24,13 @@ def check_db_connection(retry=None):
     conn_str = os.environ.get('CKAN_SQLALCHEMY_URL', '')
     try:
         connection = psycopg2.connect(conn_str)
-
     except psycopg2.Error as e:
-        print((str(e)))
+        print(str(e))
         print('[prerun] Unable to connect to the database...try again in a while.')
         import time
         time.sleep(10)
         check_db_connection(retry = retry - 1)
-    else:
+    finally:
         connection.close()
 
 def check_solr_connection(retry=None):
@@ -85,17 +84,13 @@ def init_db():
             raise e
     print('[prerun] Initializing or upgrading db - finish')
 
-
 def init_datastore():
-
     conn_str = os.environ.get('CKAN_DATASTORE_WRITE_URL')
     if not conn_str:
         print('[prerun] Skipping datastore initialization')
         return
 
-    datastore_perms_command = ['ckan', '-c', ckan_ini, 'datastore',
-                               'set-permissions']
-
+    datastore_perms_command = ['ckan', '-c', ckan_ini, 'datastore','set-permissions']
     connection = psycopg2.connect(conn_str)
     cursor = connection.cursor()
 
@@ -104,19 +99,20 @@ def init_datastore():
         datastore_perms = subprocess.Popen(
             datastore_perms_command,
             stdout=subprocess.PIPE)
-
         perms_sql = datastore_perms.stdout.read()
-        # Remove internal pg command as psycopg2 does not like it
         perms_sql = re.sub('\\\\connect \"(.*)\"', '', perms_sql.decode('utf-8'))
+        perms_sql_list = perms_sql.split('\n')
+        perms_sql_list.pop(0)
+        perms_sql = '\n'.join(perms_sql_list)
+        print(perms_sql)
         cursor.execute(perms_sql)
         for notice in connection.notices:
             print(notice)
-
         connection.commit()
 
         print('[prerun] Initializing datastore db - end')
         print((datastore_perms.stdout.read()))
-    except psycopg2.Error as e:
+    except psycopg2.errors.SyntaxError as e:
         print('[prerun] Could not initialize datastore')
         print(e)
 
@@ -133,9 +129,7 @@ def init_datastore():
         cursor.close()
         connection.close()
 
-
 def create_sysadmin():
-
     print('[prerun] Start create_sysadmin...')
 
     name = os.environ.get('CKAN_SYSADMIN_NAME')
@@ -169,9 +163,7 @@ def create_sysadmin():
         print(('[prerun] Made user {0} a sysadmin'.format(name)))
 
 if __name__ == '__main__':
-
     maintenance = os.environ.get('MAINTENANCE_MODE', '').lower() == 'true'
-
     if maintenance:
         print('[prerun] Maintenance mode, skipping setup...')
     else:
