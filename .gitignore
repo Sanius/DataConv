@@ -8,7 +8,6 @@ __pycache__/
 
 # logging file
 logs/
-dags/
 airflow-logs/
 *.log
 latest
