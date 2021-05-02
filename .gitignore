@@ -35,3 +35,6 @@ intermediate_data/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.pid
+
+# Include .env file
+!.env
