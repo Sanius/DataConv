@@ -138,16 +138,19 @@ RUN pyenv activate ckan && \
     python3 -m pip install -r /srv/app/src/ckan/requirements.txt && \
     cd ${SRC_DIR}/ckan && \
     cp who.ini ${APP_DIR}
+
+COPY ckan/setup/app/ ${APP_DIR}
+
 RUN pyenv activate ckan && \
-    # Generate CKAN config
-    ckan generate config ${APP_DIR}/production.ini && \
-    # Configure plugins
-    ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN_PLUGINS}" && \
-    # Create the data directory
+#     # Generate CKAN config
+#     ckan generate config ${APP_DIR}/production.ini && \
+#     # Configure plugins
+    # ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN_PLUGINS}" && \
+#     # Create the data directory
     mkdir -p ${DATA_DIR} && \
-    # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
+#     # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
     ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
-    # Set the default level for extensions to INFO
+#     # Set the default level for extensions to INFO
     ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO 
 
 # ================================================================================================
@@ -158,7 +161,6 @@ RUN pyenv activate ckan && \
 WORKDIR ${APP_DIR}
 # Copy necessary scripts
 RUN mkdir -p ${APP_DIR}/ext_requirements
-COPY ckan/setup/app/ ${APP_DIR}
 COPY ckan/ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
 
 # Create entrypoint directory for children image scripts
