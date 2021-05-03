@@ -141,17 +141,19 @@ RUN pyenv activate ckan && \
 
 COPY ckan/setup/app/ ${APP_DIR}
 
-RUN pyenv activate ckan && \
+RUN mkdir -p ${DATA_DIR}
+
+# RUN pyenv activate ckan && \
 #     # Generate CKAN config
 #     ckan generate config ${APP_DIR}/production.ini && \
 #     # Configure plugins
     # ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN_PLUGINS}" && \
 #     # Create the data directory
-    mkdir -p ${DATA_DIR} && \
+    # mkdir -p ${DATA_DIR} && \
 #     # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
-    ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
+    # ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
 #     # Set the default level for extensions to INFO
-    ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO 
+    # ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO 
 
 # ================================================================================================
 
