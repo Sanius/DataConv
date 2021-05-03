@@ -8,9 +8,9 @@ __pycache__/
 
 # logging file
 logs/
-dags/
 airflow-logs/
 *.log
+latest
 
 # Distribution / packaging
 .Python
@@ -34,3 +34,7 @@ intermediate_data/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.pid
+
+# Include .env file
+!.env
