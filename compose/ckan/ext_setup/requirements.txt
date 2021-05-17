@@ -4,4 +4,5 @@ apache-airflow
 python-pcre
 psycopg2
 jsonpickle
-xmltodict
+python-dotenv
+apache-airflow

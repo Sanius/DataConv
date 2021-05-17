@@ -162,6 +162,10 @@ services:
             - mysql_data:/var/lib/mysql
         networks:
             - backend
+        cap_add:
+            - SYS_NICE
+        security_opt:
+            - seccomp:unconfined
 
     mongo:
         container_name: mongo

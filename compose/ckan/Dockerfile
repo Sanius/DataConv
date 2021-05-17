@@ -59,7 +59,22 @@ RUN apt-get install -y apt-utils \
         libreadline-dev \
         libsqlite3-dev \
         liblzma-dev \
-        apache2-utils
+        apache2-utils \
+        mysql-client \ 
+        openjdk-11-jdk \
+        zip \
+        freetds-bin \
+        ldap-utils \
+        libffi-dev \
+        libsasl2-2 \
+        libsasl2-modules \
+        libssl1.1 \
+        locales  \
+        lsb-release \
+        sasl2-bin \
+        sqlite3 \
+        mongo-tools\
+        unixodbc
 # Create a local user and group to run the app
 RUN addgroup --system --gid 92 ckan && \
     # adduser -u 92 -h /srv/app -H -D -S -G ckan ckan
@@ -79,6 +94,7 @@ RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $PYENV_ROOT/plugins/
 ENV PATH $PYENV_ROOT/plugins/pyenv-virtualenv/shims:$PYENV_ROOT/plugins/pyenv-virtualenv/bin:$PATH
 RUN git clone https://github.com/pyenv/pyenv-update.git $PYENV_ROOT/plugins/pyenv-update
 ENV PATH $PYENV_ROOT/plugins/pyenv-update/bin:$PATH
+RUN echo eval "$(pyenv init --path)" >>  ${APP_DIR}/.bashrc
 RUN echo eval "$(pyenv init -)" >>  ${APP_DIR}/.bashrc
 RUN echo eval "$(pyenv virtualenv-init -)" >>  ${APP_DIR}/.bashrc
 
@@ -143,18 +159,6 @@ COPY ckan/setup/app/ ${APP_DIR}
 
 RUN mkdir -p ${DATA_DIR}
 
-# RUN pyenv activate ckan && \
-#     # Generate CKAN config
-#     ckan generate config ${APP_DIR}/production.ini && \
-#     # Configure plugins
-    # ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN_PLUGINS}" && \
-#     # Create the data directory
-    # mkdir -p ${DATA_DIR} && \
-#     # Webassets can't be loaded from env variables at runtime, it needs to be in the config so that it is created
-    # ckan config-tool ${APP_DIR}/production.ini "ckan.webassets.path = ${DATA_DIR}/webassets" && \
-#     # Set the default level for extensions to INFO
-    # ckan config-tool ${APP_DIR}/production.ini -s logger_ckanext -e level=INFO 
-
 # ================================================================================================
 
 # ================================================================================================
@@ -178,29 +182,11 @@ USER root
 
 RUN apt-get -y update
 
-RUN apt-get install -y --no-install-recommends \
-    mysql-client \ 
-    openjdk-11-jdk \
-    zip \
-    freetds-bin \
-    ldap-utils \
-    libffi-dev \
-    libsasl2-2 \
-    libsasl2-modules \
-    libssl1.1 \
-    locales  \
-    lsb-release \
-    sasl2-bin \
-    sqlite3 \
-    mongo-tools\
-    unixodbc
-
 USER ckan
 RUN mkdir -p /srv/app/airflow
 RUN chmod 777 -R /srv/app/airflow
 ENV AIRFLOW_HOME=/srv/app/airflow
 RUN pyenv local ckan && \
-    python3 -m pip install apache-airflow && \
     python3 -m pip install --upgrade https://github.com/pajachiet/pymongo-schema/archive/master.zip
 USER root
 RUN chown ckan:ckan /srv/app/airflow
