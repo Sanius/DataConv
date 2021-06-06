@@ -107,36 +107,10 @@ RUN pyenv virtualenv ${PYTHON_VERSION} ckan
 # ================================================================================================
 # Build ckan
 
-# Downgrade setuptools so that CKAN requirements can be built
-RUN pyenv activate ckan && \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install setuptools==44.1.0 && \
-    python3 -m pip install wheel && \
-    python3 -m pip install psycopg2 && \
-    python3 -m pip install psycopg2-binary && \
-    python3 -m pip install numpy
-
 # Create the src directory
 RUN ln -s $PYENV_ROOT/versions/ckan/src ${SRC_DIR}
 # Set default src dir
 WORKDIR ${SRC_DIR}
-
-USER root
-RUN chown ckan:ckan $PYENV_ROOT/versions/ckan/src
-USER ckan
-RUN pyenv activate ckan && \
-    # Fetch and build CKAN and requirements
-    python3 -m pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan && \
-    python3 -m pip install uwsgi==2.0.19.1 gevent==20.6.2 greenlet==0.4.16
-
-# ================================================================================================
-
-# ================================================================================================
-# Build ckan extensions
-
-RUN chown ckan:ckan ${SRC_DIR}
-RUN pyenv activate ckan && \
-    python3 -m pip install -e git+https://github.com/Sanius/ckanext-mysql2mongodb@develop#egg=ckanext-mysql2mongodb --no-cache-dir
 
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
@@ -146,18 +120,27 @@ USER root
 RUN locale-gen en_US.UTF-8 && \
     # Set timezone
     echo "UTC" >  /etc/timezone
+RUN chown ckan:ckan $PYENV_ROOT/versions/ckan/src
 USER ckan
-
-# Install CKAN
+RUN chown ckan:ckan ${SRC_DIR}
+# Copy necessary scripts
+COPY ckan/ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
 RUN pyenv activate ckan && \
+    python3 -m pip install --upgrade pip && \
+    # Fetch and build CKAN and requirements
+    python3 -m pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan && \
+    # Install CKAN & extension
     python3 -m pip install -e /srv/app/src/ckan && \
-    python3 -m pip install -r /srv/app/src/ckan/requirements.txt && \
-    cd ${SRC_DIR}/ckan && \
-    cp who.ini ${APP_DIR}
+    python3 -m pip install -e git+https://github.com/Sanius/ckanext-mysql2mongodb@develop#egg=ckanext-mysql2mongodb --no-cache-dir && \
+    python3 -m pip install -r ${APP_DIR}/ext_requirements/requirements.txt && \
+    python3 -m pip install -r /srv/app/src/ckan/requirements.txt
+
+RUN cd ${SRC_DIR}/ckan && \
+    cp who.ini ${APP_DIR} && \
+    mkdir -p ${DATA_DIR} && \
+    mkdir -p ${APP_DIR}/ext_requirements
 
 COPY ckan/setup/app/ ${APP_DIR}
-
-RUN mkdir -p ${DATA_DIR}
 
 # ================================================================================================
 
@@ -165,18 +148,12 @@ RUN mkdir -p ${DATA_DIR}
 # Build ckan extensions
 
 WORKDIR ${APP_DIR}
-# Copy necessary scripts
-RUN mkdir -p ${APP_DIR}/ext_requirements
-COPY ckan/ext_setup/requirements.txt ${APP_DIR}/ext_requirements/
 
 # Create entrypoint directory for children image scripts
 ONBUILD RUN mkdir docker-entrypoint.d
 
 # Create afterinit directory for children image scripts
 ONBUILD RUN mkdir docker-afterinit.d
-
-RUN pyenv activate ckan && \
-    python3 -m pip install -r ${APP_DIR}/ext_requirements/requirements.txt
 
 USER root
 
@@ -186,8 +163,7 @@ USER ckan
 RUN mkdir -p /srv/app/airflow
 RUN chmod 777 -R /srv/app/airflow
 ENV AIRFLOW_HOME=/srv/app/airflow
-RUN pyenv local ckan && \
-    python3 -m pip install --upgrade https://github.com/pajachiet/pymongo-schema/archive/master.zip
+RUN pyenv local ckan
 USER root
 RUN chown ckan:ckan /srv/app/airflow
 RUN chmod ugo+rwx /srv/app/airflow
